@@ -94,3 +94,44 @@
         name: "{{ mysql_user }}"
         password: "{{ mysql_password }}"
         priv: '{{ mysql_database }}.*:ALL'
+
+
+    - name: "Wordpress - Downloading Archivefile"
+      get_url:
+        url: "{{ wordpress_url }}"
+        dest: /tmp/wordpress.tar
+            
+    - name: "Wordpress - Extracting ArchiveFile"
+      unarchive:
+        src: /tmp/wordpress.tar
+        dest: /tmp/
+        remote_src: true
+            
+    - name: "Wordpress - Copying Contents To DocumentRoot"
+      copy:
+        src: /tmp/wordpress/
+        dest: "/var/www/html/{{ httpd_domain }}"
+        remote_src: true
+        owner: "{{ httpd_owner }}"
+        group: "{{ httpd_group }}"
+            
+    - name: "Worpress - Creating wp-config.php File"
+      template:
+        src: wp-config.php.j2
+        dest: "/var/www/html/{{ httpd_domain }}/wp-config.php"
+            
+    - name: "Post-installation Restart"
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        - httpd
+        - mariadb
+        
+    - name: "Post-Installation Cleanup"
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/wordpress.tar
+        - /tmp/wordpress
